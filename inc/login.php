@@ -1,10 +1,30 @@
 <?php
     if(!empty($_REQUEST['go'])) {
-        if(Auth::getInstance()->tryLog($_REQUEST['login'], $_REQUEST['pwd'])) {
-            header('Location:index.php?sid='.Auth::getInstance()->getSid());
-            exit;
+        $login = trim($_REQUEST['login'] ?? '');
+        $pwd = $_REQUEST['pwd'] ?? '';
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        $auth = Auth::getInstance();
+
+        $locked = $auth->isLocked($login, $ip);
+        if(!empty($locked)) {
+            $mins = ceil(intval($locked) / 60);
+            echo '<p>Trop de tentatives de connexion. Réessayez dans '.htmlspecialchars($mins).' minute(s).</p>';
         } else {
-            echo '<p>Erreur d\'identifiants !</p>';
+            if($auth->tryLog($login, $pwd)) {
+                $auth->resetAttempts($login, $ip);
+                header('Location:index.php?sid='. $auth->getSid());
+                exit;
+            } else {
+                $auth->recordFailedAttempt($login, $ip);
+                $remaining = $auth->attemptsRemaining($login, $ip);
+                echo '<p>Erreur d\'identifiants !';
+                if($remaining > 0) {
+                    echo ' Il vous reste '.intval($remaining).' tentative(s).';
+                } else {
+                    echo ' Compte bloqué pour '.ceil(Auth::LOCKOUT_SECONDS/60).' minute(s).';
+                }
+                echo '</p>';
+            }
         }
     }
 ?><form method="post">
