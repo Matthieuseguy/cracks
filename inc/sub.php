@@ -16,7 +16,7 @@
         </p>
         <p>
             <label>
-                Login
+                Mot de passe
                 <input type="password"
                        required="required"
                        name="pwd" />
