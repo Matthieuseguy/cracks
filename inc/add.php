@@ -1,7 +1,12 @@
 <?php
+    if (!Auth::getInstance()->isLogged()) {
+        header('Location: index.php?inc=login&error=auth_required');
+        exit;
+    }
+
     if(!empty($_REQUEST['val'])) {
         $q = 'insert into cracks (content, owner, datesend) '
-                . ' values("'.nl2br($_REQUEST['content']).'", "'.$_REQUEST['owner'].'", '.time().')';
+                . ' values("'.nl2br($_REQUEST['content']).'", "'.$_REQUEST['userid'].'", '.time().')';
         $db->query($q);
         // rediriger vers le nouveau crack
         header('Location:index.php?inc=search&cid='.$db->lastInsertId());

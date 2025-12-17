@@ -20,12 +20,12 @@
                     <a href="/?inc=search">
                         Cracks
                     </a>
-                </li>
+                </li><?php if(!Auth::getInstance()->isLogged()) { ?>
                 <li>
                     <a href="/?inc=add">
                         Nouveau
                     </a>
-                </li><?php if(!Auth::getInstance()->isLogged()) { ?>
+                </li>
                 <li>
                     <a href="/?inc=login">
                         Connexion
