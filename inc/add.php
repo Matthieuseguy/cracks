@@ -5,8 +5,9 @@
     }
 
     if(!empty($_REQUEST['val'])) {
+        $char_content = htmlspecialchars($_REQUEST['content'], ENT_QUOTES, 'UTF-8');
         $q = 'insert into cracks (content, owner, datesend) '
-                . ' values("'.nl2br($_REQUEST['content']).'", "'.$_REQUEST['userid'].'", '.time().')';
+                . ' values("'.nl2br($char_content).'", "'.$_SESSION['userid'].'", '.time().')';
         $db->query($q);
         // rediriger vers le nouveau crack
         header('Location:index.php?inc=search&cid='.$db->lastInsertId());
@@ -22,9 +23,6 @@
             <textarea name="content"
                       id="content"
                       required="required"></textarea>
-            <input type="hidden"
-                   name="owner"
-                   value="<?php echo $_SESSION['userid']; ?>" />
             <input type="submit" name="val" value="Ajouter ce crack" />
         </p>
     </div>
