@@ -19,14 +19,15 @@ class Auth {
     public function subscribe($login, $pwd) {
         global $db;
         $hash = password_hash($pwd, PASSWORD_BCRYPT);
-        $q = 'insert into users values(null, "'.addslashes($login).'", "'.$hash.'", 0)';
-        $db->query($q);
+        $stmt = $db->prepare(
+            "INSERT INTO users (login, pwd, isadmin) VALUES (?, ?, 0)"
+        );
+        $stmt->execute([$login, $hash]);
     }
     
     public function tryLog($login, $pwd): bool {
         global $db;
 
-        // Récupération de l'utilisateur par login
         $stmt = $db->prepare("SELECT * FROM users WHERE login = ?");
         $stmt->execute([$login]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -57,14 +58,21 @@ class Auth {
     
     public function getCodeFromLogin($login) {
         global $db;
-        $q = 'select id, pwd from users where login="'.$login.'"';
-        return $db->query($q)->fetch(PDO::FETCH_ASSOC);
+        $stmt = $db->prepare(
+            "SELECT id, pwd FROM users WHERE login = ?"
+        );
+        $stmt->execute([$login]);
+
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
     public function resetPwd($id, $code, $newPwd) {
         global $db;
         $hash = password_hash($newPwd, PASSWORD_BCRYPT);
-        $q = 'update users set pwd="'.$hash.'" where id="'.$id.'" and pwd="'.$code.'"';
-        $db->query($q);
+
+        $stmt = $db->prepare(
+            "UPDATE users SET pwd = ? WHERE id = ? AND pwd = ?"
+        );
+        $stmt->execute([$hash, $id, $code]);
     }
 }
