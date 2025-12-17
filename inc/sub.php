@@ -1,6 +1,9 @@
 <?php
     if(!empty($_REQUEST['valid'])) {
-        Auth::getInstance()->subscribe($_REQUEST['login'], $_REQUEST['pwd']);
+        $login = preg_replace('/\s+/', '', $_REQUEST['login']);
+        $pwd   = preg_replace('/\s+/', '', $_REQUEST['pwd']);
+
+        Auth::getInstance()->subscribe($login, $pwd);
         echo '<p>Inscription réalisée avec succès !</p>';
     }
 ?><form method="post">
