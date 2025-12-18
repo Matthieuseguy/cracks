@@ -14,7 +14,7 @@ if (!$user) {
 }
 
 //Vérification des tokens
-$expectedToken = hash('sha256', $user['id'] . $user['pwd'] . 'SECRET_SALT_123');
+$expectedToken = hash('sha256', $user['id'] . $user['pwd'] . 'kf73HT4F0384YGF');
 if ($expectedToken !== $_REQUEST['code']) {
     echo '<p style="color: red;">Lien est invalide ou expiré.</p>';
     exit;

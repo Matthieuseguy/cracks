@@ -39,7 +39,7 @@ if (!$user || $user['isadmin'] != 1) {
                 echo '<p style="color: red;">Error.</p>';
             } else {
                 //Creation token sécurisé si l'utilisateur existe
-                $token = hash('sha256', $found['id'] . $found['pwd'] . 'SECRET_SALT_123');
+                $token = hash('sha256', $found['id'] . $found['pwd'] . 'kf73HT4F0384YGF');
                 $resetLink = $_SERVER['HTTP_HOST'] . '/?inc=rst&id=' . $found['id'] . '&code=' . $token;
                 ?>
         <kbd><?php echo htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8'); ?></kbd>
