@@ -6,7 +6,6 @@ pwd varchar(200) not null,
 isadmin boolean not null default 0,
 failed_attempts INT DEFAULT 0,
 locked_until DATETIME NULL;
-
 );
 
 create table cracks(
