@@ -40,6 +40,8 @@ class Auth {
         }
 
         if (!empty($user['locked_until']) && strtotime($user['locked_until']) > time()) {
+            echo '<p style="color: red;">Vous avez effectué trop de tentatives de connexion,</p>';
+            echo '<p style="color: red;">votre compte est momentanément bloqué</p>';
             return false;
         }
 
