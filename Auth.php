@@ -70,7 +70,7 @@ class Auth {
         if ($newAttempts >= self::MAX_ATTEMPTS) {
             $lockUntil = date('Y-m-d H:i:s', time() + (self::LOCKOUT_TIME * 60));
             $stmt = $db->prepare(
-                "UPDATE users SET failed_attempts = ?, locked_until = ? WHERE id = ?"
+                "UPDATE users SET failed_attempts = 0, locked_until = ? WHERE id = ?"
             );
             $stmt->execute([$newAttempts, $lockUntil, $user['id']]);
         } else {
