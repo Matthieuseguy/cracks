@@ -3,7 +3,10 @@ create table users(
 id integer not null primary key autoincrement,
 login varchar(200) not null unique,
 pwd varchar(200) not null,
-isadmin boolean not null default 0
+isadmin boolean not null default 0,
+failed_attempts INT DEFAULT 0,
+locked_until DATETIME NULL;
+
 );
 
 create table cracks(
@@ -20,4 +23,4 @@ val integer not null
 );
 
 insert into users (login, pwd, isadmin)
-values('admin', '21232f297a57a5a743894a0e4a801fc3', 1);
+values('admin', '21232f297a57a5a743894a0e4a801fc3', 1, 0, NULL);
