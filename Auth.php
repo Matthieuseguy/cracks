@@ -1,28 +1,35 @@
 <?php
 
 /**
- * Description of Auth
- *
- * @author 
+ * Auth – gestion d'authentification sécurisée
  */
 class Auth {
     use tSingleton;
-    
-    // Remédiation : ajout des variables nombre de tentatives et durée de blocage
+
     private const MAX_ATTEMPTS = 5;
-    private const LOCKOUT_TIME = 15;
-    
-    public function subscribe($login, $pwd) {
+    private const LOCKOUT_TIME = 15; // minutes
+
+    private function ensureSession(): void {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
+    }
+
+    public function subscribe(string $login, string $pwd): void {
         global $db;
+
         $hash = password_hash($pwd, PASSWORD_BCRYPT);
         $stmt = $db->prepare(
-            "INSERT INTO users (login, pwd, isadmin, failed_attempts) VALUES (?, ?, 0, 0)"
+            "INSERT INTO users (login, pwd, isadmin, failed_attempts, locked_until)
+             VALUES (?, ?, 0, 0, NULL)"
         );
         $stmt->execute([$login, $hash]);
     }
-    
-    public function tryLog($login, $pwd): bool {
+
+
+    public function tryLog(string $login, string $pwd): bool {
         global $db;
+        $this->ensureSession();
 
         $stmt = $db->prepare("SELECT * FROM users WHERE login = ?");
         $stmt->execute([$login]);
@@ -32,75 +39,104 @@ class Auth {
             return false;
         }
 
-        //Remédiation : vérifier si le compte est verrouillé directement depuis la base de données
-        if ($user['locked_until'] && strtotime($user['locked_until']) > time()) {
+        if (!empty($user['locked_until']) && strtotime($user['locked_until']) > time()) {
             return false;
         }
 
+        // Mot de passe correct
         if (password_verify($pwd, $user['pwd'])) {
-            //Mot de passe correct : réinitialiser les tentatives
+
+            // Régénération du SID (anti fixation)
+            session_regenerate_id(true);
+
+            // Reset tentatives
             $stmt = $db->prepare(
                 "UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = ?"
             );
             $stmt->execute([$user['id']]);
-            
-            $this->log($user['id']);
+
+            // Login effectif
+            $_SESSION['userid'] = (int)$user['id'];
+            $_SESSION['logged_at'] = time();
+
             return true;
-        } else {
-            //Mot de passe incorrect : tentatives +1
-            $newAttempts = $user['failed_attempts'] + 1;
-            
-            if ($newAttempts >= self::MAX_ATTEMPTS) {
-                //Blocage du compte en cs de tentatives max atteintes: 
-                $lockUntil = date('Y-m-d H:i:s', time() + (self::LOCKOUT_TIME * 60));
-                $stmt = $db->prepare(
-                    "UPDATE users SET failed_attempts = ?, locked_until = ? WHERE id = ?"
-                );
-                $stmt->execute([$newAttempts, $lockUntil, $user['id']]);
-            } else {
-                $stmt = $db->prepare(
-                    "UPDATE users SET failed_attempts = ? WHERE id = ?"
-                );
-                $stmt->execute([$newAttempts, $user['id']]);
-            }
-            
-            return false;
         }
+
+        // Mot de passe incorrect
+        $newAttempts = ((int)$user['failed_attempts']) + 1;
+
+        if ($newAttempts >= self::MAX_ATTEMPTS) {
+            $lockUntil = date('Y-m-d H:i:s', time() + (self::LOCKOUT_TIME * 60));
+            $stmt = $db->prepare(
+                "UPDATE users SET failed_attempts = ?, locked_until = ? WHERE id = ?"
+            );
+            $stmt->execute([$newAttempts, $lockUntil, $user['id']]);
+        } else {
+            $stmt = $db->prepare(
+                "UPDATE users SET failed_attempts = ? WHERE id = ?"
+            );
+            $stmt->execute([$newAttempts, $user['id']]);
+        }
+
+        return false;
     }
 
-    public function log($id) {
-        $_SESSION['userid'] = $id;
+
+    public function logoff(): void {
+        $this->ensureSession();
+
+        $_SESSION = [];
+        if (ini_get('session.use_cookies')) {
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                '',
+                time() - 42000,
+                $params['path'],
+                $params['domain'],
+                $params['secure'],
+                $params['httponly']
+            );
+        }
+        session_destroy();
     }
-    
-    public function logoff() {
-        $_SESSION['userid'] = null;
-    }
-    
-    public function isLogged() {
+
+
+    public function isLogged(): bool {
+        $this->ensureSession();
         return !empty($_SESSION['userid']);
     }
-    
-    public function getSid() {
+
+
+    public function getSid(): string {
+        $this->ensureSession();
         return session_id();
     }
-    
-    public function getCodeFromLogin($login) {
+
+    public function getCodeFromLogin(string $login): ?array {
         global $db;
+
         $stmt = $db->prepare(
             "SELECT id, pwd FROM users WHERE login = ?"
         );
         $stmt->execute([$login]);
 
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $res = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $res ?: null;
     }
-    
-    public function resetPwd($id, $code, $newPwd) {
-        global $db;
-        $hash = password_hash($newPwd, PASSWORD_BCRYPT);
 
+    
+    public function resetPwd(int $id, string $code, string $newPwd): bool {
+        global $db;
+
+        $hash = password_hash($newPwd, PASSWORD_BCRYPT);
         $stmt = $db->prepare(
-            "UPDATE users SET pwd = ?, failed_attempts = 0, locked_until = NULL WHERE id = ? AND pwd = ?"
+            "UPDATE users
+             SET pwd = ?, failed_attempts = 0, locked_until = NULL
+             WHERE id = ? AND pwd = ?"
         );
         $stmt->execute([$hash, $id, $code]);
+
+        return $stmt->rowCount() === 1;
     }
 }

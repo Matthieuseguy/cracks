@@ -22,11 +22,6 @@
                     </a>
                 </li><?php if(!Auth::getInstance()->isLogged()) { ?>
                 <li>
-                    <a href="/?inc=add">
-                        Nouveau
-                    </a>
-                </li>
-                <li>
                     <a href="/?inc=login">
                         Connexion
                     </a>
@@ -38,10 +33,16 @@
                 </li>
                 <?php } else { ?>
                 <li>
+                    <a href="/?inc=add">
+                        Nouveau
+                    </a>
+                </li>
+                <li>
                     <a href="/?inc=logoff">
                         Déconnexion
                     </a>
-                </li><?php } ?>
+                </li>
+                <?php } ?>
             </menu>
         </header>
         <main>
