@@ -1,9 +1,17 @@
 <?php
-$systemMdp = 'pwd1234';
 
 require_once 'config.php';
 
 if($systemMdp != $_REQUEST['mdp']) {
+    echo 'Accès interdit !';
+    exit;
+}
+
+$stmt = $db->prepare("SELECT isadmin FROM users WHERE id = ?");
+$stmt->execute([$_SESSION['userid']]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$user || $user['isadmin'] != 1) {
     echo 'Accès interdit !';
     exit;
 }
@@ -20,15 +28,25 @@ if($systemMdp != $_REQUEST['mdp']) {
         <form method="post">
             <p>
                 <input type="text" name="login" placeholder="login" />
-                <input type="hidden" name="mdp" value="<?php echo $systemMdp; ?>" />
                 <input type="submit" name="valid" value="Obtenir le lien" />
             </p>
         </form>
         <p>Envoyer ce code à l'utilisateur qui a oublié son mdp</p>
         <?php if(!empty($_REQUEST['valid'])) {
-            $found = Auth::getInstance()->getCodeFromLogin($_REQUEST['login']);
-            ?>
-        <kbd><?php echo $_SERVER['HTTP_HOST'].'/?inc=rst&amp;id='.$found['id'].'&amp;code='.$found['pwd']; ?></kbd>
-        <?php } ?>
+            $login = htmlspecialchars($_REQUEST['login'], ENT_QUOTES, 'UTF-8');
+            $found = Auth::getInstance()->getCodeFromLogin($login);
+            if (!$found) {
+                echo '<p style="color: red;">Error.</p>';
+            } else {
+                //Creation token sécurisé si l'utilisateur existe
+                $token = hash('sha256', $found['id'] . $found['pwd'] . 'SECRET_SALT_123');
+                $resetLink = $_SERVER['HTTP_HOST'] . '/?inc=rst&id=' . $found['id'] . '&code=' . $token;
+                ?>
+        <kbd><?php echo htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8'); ?></kbd>
+        <p style="color: green;">Lien généré pour : <strong><?php echo htmlspecialchars($login, ENT_QUOTES, 'UTF-8'); ?></strong></p>
+        <?php 
+            }
+        }
+        ?>
     </body>
 </html>
